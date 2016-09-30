@@ -5,9 +5,11 @@
 #include <semantic_map/semantic_map_summary_parser.h>
 #include <semantic_map/room_xml_parser.h>
 #include <deep_object_detection/DetectObjects.h>
+#include <pcl/visualization/pcl_visualizer.h>
 #include <pcl_ros/transforms.h>
 #include <pcl/filters/passthrough.h>
 #include <tf/tf.h>
+#include <pcl/visualization/cloud_viewer.h>
 
 
 
@@ -46,6 +48,7 @@ std::vector< std::pair<deep_object_detection::Object,Cloud> > refineObjects(cons
                                                                             int image_cols, const std::vector<std::string> labels, tf::Vector3 robotPosition);
 
 
+void visualizeDeepNetObjects( std::pair<deep_object_detection::Object,Cloud> apair, sensor_msgs::Image image);
 
 
 

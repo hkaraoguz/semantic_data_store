@@ -63,7 +63,7 @@ int main(int argc, char** argv)
 
     ros::Publisher pub = n.advertise<Cloud>("complete_clouds", 1);
 
-    ros::Rate loop_rate(20);
+    ros::Rate loop_rate(0.1);
 
 
 

@@ -336,3 +336,57 @@ Cloud crop3DObjectFromPointCloud(const deep_object_detection::Object& object, Cl
     return objectpc;
 
 }
+
+// The function that visualizes objects detected by deep-net
+void visualizeDeepNetObjects( std::pair<deep_object_detection::Object,Cloud> apair, sensor_msgs::Image image)
+{
+
+    ROS_INFO("%s",apair.first.label.data());
+
+    cv_bridge::CvImagePtr ptr = cv_bridge::toCvCopy(image,"bgr8");
+
+    cv_bridge::CvImagePtr ptr2 = cv_bridge::toCvCopy(image,"bgr8");
+
+    cv::imshow("image_org",ptr2->image);
+
+
+    cv::rectangle(ptr->image,cv::Point(apair.first.x,apair.first.y),
+                  cv::Point(apair.first.x+apair.first.width, apair.first.y + apair.first.height),cv::Scalar(255,255,0));
+    cv::putText(ptr->image,apair.first.label.data(),cv::Point(apair.first.x,apair.first.y-5),0,2.0,cv::Scalar(255,255,0));
+
+    cv::imshow("image_found",ptr->image);
+
+
+    //  pcl_ros::transformPointCloud(refinedObjectsCloudsPair[i].second, refinedObjectsCloudsPair[i].second,world_transform);
+
+    pcl::visualization::CloudViewer viewer("pclviewer");
+    //pcl::visualization::PCLVisualizer *p = new pcl::visualization::PCLVisualizer ("Labelled data");
+
+   // p->addCoordinateSystem();
+    std::stringstream ss;
+    ss<<"cloud_"<<1;
+   // p->addPointCloud(apair.second.makeShared(),ss.str().data());
+
+    viewer.showCloud(apair.second.makeShared(),ss.str().data());
+
+    while(true) {
+     int key =  cv::waitKey(10);
+     if((char)key=='q') break;
+    }
+    cv::destroyAllWindows();
+
+
+    //p->spin();
+
+   // p->removeAllPointClouds();
+   // p->close();
+
+   // while( !p->wasStopped());
+
+  //  delete p;
+
+
+
+    return;
+
+}
