@@ -2,6 +2,7 @@
 #include "util.h"
 #include "metaroom_xml_parser/load_utilities.h"
 #include <pcl/visualization/pcl_visualizer.h>
+#include <pcl/common/common.h>
 #include <pcl_ros/transforms.h>
 #include <semantic_map/semantic_map_summary_parser.h>
 #include <semantic_map/room_xml_parser.h>
@@ -81,12 +82,29 @@ int main(int argc, char** argv)
         msg.header.frame_id = "map";
         msg.height = sweep.completeRoomCloud->height;
         msg.width = sweep.completeRoomCloud->width;
+        ROS_INFO("%s",sweep.completeRoomCloud->header.frame_id.data());
        // ROS_INFO("Msg width: %ld height: %ld \n",msg.height,msg.width);
         msg.points.resize(msg.height*msg.width);
-        msg.points = sweep.completeRoomCloud->points;
+        msg.points.assign(sweep.completeRoomCloud->points.begin(),sweep.completeRoomCloud->points.end());
+       /* for(size_t i = 0; i< msg.points.size();i++)
+        {
+            PointType apoint = msg.points[i];
+            ROS_INFO("x:%.2f y:%.2f z:%.2f",apoint.x,apoint.y,apoint.z);
+        }*/
+
+
         msg.header.stamp = ros::Time::now().toSec();
 
-        pcl_ros::transformPointCloud(msg, msg,sweep.vIntermediateRoomCloudTransforms[0]);
+      /*  pcl::PointCloud<pcl::PointXYZRGB> cloud = msg;
+
+        pcl::PointXYZRGB min_pt;
+        pcl::PointXYZRGB  max_pt;
+
+        pcl::getMinMax3D(cloud,min_pt,max_pt)	;
+        ROS_INFO("Min points x:%.2f, y:%.2f z:%.2f, Max points x:%.2f y:%.2f z:%.2f",min_pt.x,min_pt.y,min_pt.z,max_pt.x,max_pt.y,max_pt.z);*/
+
+
+      //  pcl_ros::transformPointCloud(msg, msg,sweep.vIntermediateRoomCloudTransforms[0]);
 
 
          pub.publish(msg);

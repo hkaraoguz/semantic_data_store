@@ -258,7 +258,7 @@ std::vector< std::pair<deep_object_detection::Object,Cloud> > refineObjects(cons
         ROS_INFO("Distance of object w.r.t robot: %.2f",dist);
 
 
-        if(addindex[i] == true && dist <= 5.0)
+        if(addindex[i] == true && dist <= 3.5)
         {
 
             std::pair<deep_object_detection::Object,Cloud> objectcloudpair;

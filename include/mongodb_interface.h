@@ -97,6 +97,47 @@ public:
 
             soma_msgs::SOMAObject lobj;
 
+            QJson::Serializer serializer;
+
+            QVariantMap map;
+
+            QVariant val(obs.roomobjects[j].object.confidence);
+
+            map.insert("deep_net_confidence",val);
+
+            QVariantMap boundingbox;
+
+            QVariant bx(obs.roomobjects[j].object.x);
+            QVariant by(obs.roomobjects[j].object.y);
+            QVariant bwidth(obs.roomobjects[j].object.width);
+            QVariant bheight(obs.roomobjects[j].object.height);
+
+            boundingbox.insert("x",bx);
+            boundingbox.insert("y",by);
+            boundingbox.insert("width",bwidth);
+            boundingbox.insert("height",bheight);
+
+            map.insert("boundingbox",boundingbox);
+
+
+            bool ok = false;
+            QByteArray json = serializer.serialize(map,&ok);
+
+            if(!ok)
+            {
+                ROS_WARN("Json for metadata cannot be created!!");
+            }
+            else
+            {
+                 QString jsonstr(json);
+
+                 lobj.metadata = jsonstr.toStdString();
+            }
+
+
+
+
+
 
 
 
@@ -126,9 +167,13 @@ public:
             lobj.pose.position.y = centroid[1];
             lobj.pose.position.z = centroid[2];
 
+           /* std::stringstream ss;
+
+            ss<<"{\"deep_net_confidence\":"<<obs.roomobjects[j].object.confidence<<"\n}";
+
+            lobj.metadata = ss.str();*/
+
             lobj.images.push_back(obs.roomobjects[j].rosimage);
-
-
 
             somaobjects.push_back(lobj);
 
