@@ -94,6 +94,14 @@ int main(int argc, char** argv)
         labels.push_back("chair");
         ROS_WARN("No labels provided!! Detecting only chairs...");
     }
+    else
+    {
+        ROS_INFO("Detecting following labels: ");
+        for(auto label:labels)
+        {
+            ROS_INFO("%s ",label.data());
+        }
+    }
 
     // Wait for deep-net ros service, if not available return
     if(!ros::service::waitForService("/deep_object_detection/detect_objects",5))
@@ -140,6 +148,7 @@ int main(int argc, char** argv)
 
 
             detect_objects.request.images = rosimages;
+            detect_objects.request.observation_path = observations[i].data();
             detect_objects.request.confidence_threshold = 0.8;
 
 
@@ -204,8 +213,10 @@ int main(int argc, char** argv)
         }
     }
 
+    ROS_INFO("Finished inserting semantic data...");
 
-    ros::Rate loop(0.1);
+
+  /*  ros::Rate loop(0.1);
 
     while(n.ok())
     {
@@ -213,10 +224,10 @@ int main(int argc, char** argv)
         ros::spinOnce();
         loop.sleep();
 
-    }
+    }*/
 
-
-    delete m_MongodbInterface;
+    if(m_MongodbInterface)
+        delete m_MongodbInterface;
 
 
     return 0;

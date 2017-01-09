@@ -12,6 +12,7 @@ set(CMAKE_CXX_FLAGS "-O4 -g -fPIC -std=c++0x -fpermissive")
 
 find_package(metaroom_xml_parser REQUIRED)
 find_package(PCL 1.7 REQUIRED)
+find_package(OpenCV REQUIRED)
 #find_package(qjson)
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
@@ -43,6 +44,7 @@ catkin_package(
 include_directories(include
   ${catkin_INCLUDE_DIRS}
   ../strands_3d_mapping/metaroom_xml_parser/include/
+  ${OpenCV_HEADERS}
 )
 
 
@@ -50,7 +52,7 @@ add_executable(semantic_data_store_node src/semantic_data_store.cpp src/util.cpp
 
 add_executable(complete_cloud_publisher src/complete_cloud_publisher.cpp src/util.cpp)
 
-add_executable(table_detection_3d src/table_detection_3d.cpp)
+add_executable(table_detection_3d src/table_detection_3d.cpp src/util.cpp)
 
 
 
@@ -60,21 +62,28 @@ set_target_properties(semantic_data_store_node PROPERTIES LINKER_LANGUAGE CXX)
    ${catkin_LIBRARIES}
    ${PCL_LIBRARIES}
    ${QT_LIBRARIES}
-   util
+   ${OpenCV_LIBRARIES}
    metaroom_xml_parser
    qjson
+   jsoncpp
    )
 
 target_link_libraries(complete_cloud_publisher
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
+  ${QT_LIBRARIES}
+  ${OpenCV_LIBRARIES}
   metaroom_xml_parser
+  jsoncpp
 )
 
 target_link_libraries(table_detection_3d
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
+  ${QT_LIBRARIES}
+  ${OpenCV_LIBRARIES}
   metaroom_xml_parser
+  jsoncpp
 )
 
 #############

@@ -27,6 +27,7 @@
 #include <semantic_map/room.h>
 #include <semantic_map/semantic_map_summary_parser.h>
 #include <metaroom_xml_parser/load_utilities.h>
+#include <metaroom_xml_parser/simple_xml_parser.h>
 #include <semantic_data_store/LabelledObject.h>
 #include <soma_msgs/SOMAObject.h>
 #include <nav_msgs/OccupancyGrid.h>
@@ -34,6 +35,7 @@
 
 #include <deep_object_detection/Object.h>
 
+typedef pcl::PointXYZRGB PointType;
 
 
 
@@ -205,6 +207,73 @@ public:
         return true;
 
     }
+    template <class PointType>
+    bool logTableDetectionBasedSOMAObjects(ros::NodeHandle n, typename SimpleXMLParser<PointType>::RoomData room, std::vector<soma_msgs::SOMAObject>& tables)
+    {
+
+
+        ros::ServiceClient cl = n.serviceClient<soma_manager::SOMAInsertObjs>("soma/insert_objects");
+
+        if(!cl.exists())
+        {
+            qDebug()<<"SOMA insert_objects service does not exist!! Returning...";
+            return false;
+
+        }
+
+
+
+        for (int j=0; j<tables.size();j++)
+        {
+
+            soma_msgs::SOMAObject lobj;
+
+            boost::posix_time::ptime epoch(boost::gregorian::date(1970, 1, 1));
+            boost::posix_time::time_duration dur = room.roomLogStartTime-epoch;
+            ros::Time rost;
+            rost.fromSec(dur.total_seconds());
+
+            tables[j].header.stamp =rost;
+            tables[j].logtimestamp = dur.total_seconds();
+
+            QDateTime dt = QDateTime::fromMSecsSinceEpoch(dur.total_milliseconds());
+
+            Eigen::Vector4f centroid;
+
+            tables[j].type = "table";
+
+
+
+
+
+
+        }
+
+
+        soma_manager::SOMAInsertObjs srv;
+
+        srv.request.objects = tables;
+
+        if (cl.call(srv))
+        {
+            if(srv.response.result)
+                qDebug()<<"Objects successfully inserted";
+            else
+                qDebug()<<"Object insertion failed!";
+
+        }
+        else
+        {
+          ROS_ERROR("Failed to call soma/insert_objects service!!");
+          return false;
+        }
+
+
+
+        return true;
+
+    }
+
 
     /*template <class PointType> */
     std::vector<boost::shared_ptr<semantic_data_store::LabelledObject>> getMongoDBObjects(const std::string& jsonQuery){

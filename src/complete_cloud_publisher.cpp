@@ -82,7 +82,7 @@ int main(int argc, char** argv)
 
         pcl_ros::transformPointCloud(msg, msg,sweep.vIntermediateRoomCloudTransforms[0]);
 
-        Cloud msgclamped = clampPointCloud("z",msg,1.5);
+        Cloud msgclamped = clampPointCloud("z",msg,0.0,1.5);
 
 
         general_cloud.height += msg.height;

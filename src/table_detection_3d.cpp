@@ -8,6 +8,7 @@
 #include <semantic_map/room_xml_parser.h>
 #include <ros/subscriber.h>
 #include "table_detection/DetectTables.h"
+#include <soma_msgs/SOMAObject.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -51,30 +52,60 @@ int main(int argc, char** argv)
 
     ros::NodeHandle n;
 
-    if(!ros::service::waitForService("detect_tables",5))
+    if(!ros::service::waitForService("detect_tables",60))
     {
-          ROS_ERROR("Table detection service not available. Quitting...");
-          return -1;
+        ROS_ERROR("Table detection service not available. Quitting...");
+        return -1;
 
     }
 
     vector<string> observations = semantic_map_load_utilties::getSweepXmls<PointType>(dataPath);
 
-  //  ros::ServiceClient table_detection_client = n.serviceClient<table_detection::DetectTables>("detect_tables");
+      ros::ServiceClient table_detection_client = n.serviceClient<table_detection::DetectTables>("detect_tables");
 
     ros::Publisher pub = n.advertise<Cloud>("complete_clouds", 1);
 
     ros::Rate loop_rate(0.1);
 
+    int id = 0;
 
+    MongodbInterface* m_MongodbInterface = new MongodbInterface(n);
 
     for(string observation:observations)
     {
         // Parse the room data
         //SemanticRoom<PointType> aRoom = SemanticRoomXMLParser<PointType>::loadRoomFromXML(observation,true);
 
+        /*
+        struct RoomData
+        {
+
+            std::vector<boost::shared_ptr<pcl::PointCloud<PointType>>>                            vIntermediateRoomClouds;
+            std::vector<tf::StampedTransform>                                                     vIntermediateRoomCloudTransforms;
+            std::vector<tf::StampedTransform>                                                     vIntermediateRoomCloudTransformsRegistered;
+            std::vector<image_geometry::PinholeCameraModel>                                       vIntermediateRoomCloudCamParams;
+            std::vector<image_geometry::PinholeCameraModel>                                       vIntermediateRoomCloudCamParamsCorrected;
+            std::vector<cv::Mat>                                                                  vIntermediateRGBImages; // type CV_8UC3
+            std::vector<cv::Mat>                                                                  vIntermediateDepthImages; // type CV_16UC1
+            boost::shared_ptr<pcl::PointCloud<PointType>>                                         completeRoomCloud;
+            boost::shared_ptr<pcl::PointCloud<PointType>>                                         dynamicClusterCloud;
+            std::string                                                                           roomWaypointId;
+            std::string                                                                           roomLogName;
+            int                                                                                   roomRunNumber;
+            boost::posix_time::ptime                                                              roomLogStartTime;
+            std::vector<IntermediatePositionImages>                                               vIntermediatePositionImages;
+            Eigen::Matrix4f                                                                       roomTransform;
+
+            RoomData(){
+                completeRoomCloud = boost::shared_ptr<pcl::PointCloud<PointType>>(new pcl::PointCloud<PointType>());
+                dynamicClusterCloud = boost::shared_ptr<pcl::PointCloud<PointType>>(new pcl::PointCloud<PointType>());
+        }
+
+        */
+
         // Parse the necessary clouds
-        auto sweep = SimpleXMLParser<PointType>::loadRoomFromXML(observation, std::vector<std::string>{"RoomCompleteCloud","RoomIntermediateCloud"},false, true);
+        SimpleXMLParser<PointType>::RoomData sweep = SimpleXMLParser<PointType>::loadRoomFromXML(observation, std::vector<std::string>{"RoomCompleteCloud","RoomIntermediateCloud"},false, true);
+
 
 
         Cloud msg ;
@@ -83,10 +114,10 @@ int main(int argc, char** argv)
         msg.height = sweep.completeRoomCloud->height;
         msg.width = sweep.completeRoomCloud->width;
         ROS_INFO("%s",sweep.completeRoomCloud->header.frame_id.data());
-       // ROS_INFO("Msg width: %ld height: %ld \n",msg.height,msg.width);
+        // ROS_INFO("Msg width: %ld height: %ld \n",msg.height,msg.width);
         msg.points.resize(msg.height*msg.width);
         msg.points.assign(sweep.completeRoomCloud->points.begin(),sweep.completeRoomCloud->points.end());
-       /* for(size_t i = 0; i< msg.points.size();i++)
+        /* for(size_t i = 0; i< msg.points.size();i++)
         {
             PointType apoint = msg.points[i];
             ROS_INFO("x:%.2f y:%.2f z:%.2f",apoint.x,apoint.y,apoint.z);
@@ -95,7 +126,7 @@ int main(int argc, char** argv)
 
         msg.header.stamp = ros::Time::now().toSec();
 
-      /*  pcl::PointCloud<pcl::PointXYZRGB> cloud = msg;
+        /*  pcl::PointCloud<pcl::PointXYZRGB> cloud = msg;
 
         pcl::PointXYZRGB min_pt;
         pcl::PointXYZRGB  max_pt;
@@ -104,31 +135,31 @@ int main(int argc, char** argv)
         ROS_INFO("Min points x:%.2f, y:%.2f z:%.2f, Max points x:%.2f y:%.2f z:%.2f",min_pt.x,min_pt.y,min_pt.z,max_pt.x,max_pt.y,max_pt.z);*/
 
 
-      //  pcl_ros::transformPointCloud(msg, msg,sweep.vIntermediateRoomCloudTransforms[0]);
+        //  pcl_ros::transformPointCloud(msg, msg,sweep.vIntermediateRoomCloudTransforms[0]);
 
 
-         pub.publish(msg);
+        pub.publish(msg);
 
-         ros::spinOnce ();
+        ros::spinOnce ();
 
-         loop_rate.sleep ();
+        loop_rate.sleep ();
 
-         if(!ros::ok())
+        if(!ros::ok())
 
-             break;
+            break;
 
-       /* pcl_ros::transformPointCloud(msg, msg,sweep.vIntermediateRoomCloudTransforms[0]);
+        /* pcl_ros::transformPointCloud(msg, msg,sweep.vIntermediateRoomCloudTransforms[0]);
 
+*/
+        table_detection::DetectTables detect_tables;
 
-         table_detection::DetectTables detect_tables;
+        sensor_msgs::PointCloud2 general_cloud_msg;
 
-         sensor_msgs::PointCloud2 general_cloud_msg;
+        pcl::toROSMsg(msg, general_cloud_msg);
 
-         pcl::toROSMsg(general_cloud, general_cloud_msg);
+        detect_tables.request.pointcloud = general_cloud_msg;
 
-         detect_tables.request.pointcloud = general_cloud_msg;
-
-         if(table_detection_client.call(detect_tables))
+        /* if(table_detection_client.call(detect_tables))
          {
              ROS_INFO("The number of detected tables %d",detect_tables.response.tables.size());
              int i = 0;
@@ -149,24 +180,37 @@ int main(int argc, char** argv)
                  } else {
                      ++i;
                  }
-             }
+             }*/
+        if(table_detection_client.call(detect_tables))
+        {
+            std::vector<soma_msgs::SOMAObject> objects;
+            for(int i = 0; i < detect_tables.response.tables.size(); i++)
+            {
+                strands_perception_msgs::Table aTable = detect_tables.response.tables[i];
 
-             for(int i = 0; i < detect_tables.response.tables.size(); i++)
-             {
-                 strands_perception_msgs::Table aTable = detect_tables.response.tables[i];
+                soma_msgs::SOMAObject object;
 
-                 tf::Pose tfpose;
+                object.metadata = convertTableData2Json(aTable);
 
-                 tf::poseMsgToTF(aTable.pose.pose,tfpose);
+                pcl::PointCloud<pcl::PointXYZ> obj_ros_cloud = crop3DObjectFromPointCloud(aTable,msg);
 
-                 tf::tfDistance2(tfpose.getOrigin())
+                pcl::toROSMsg(obj_ros_cloud, object.cloud);
 
-                 aTable.pose.pose
+                object.pose = aTable.pose.pose;
+
+                objects.push_back(object);
 
 
-             }
 
-         }*/
+
+            }
+
+            if(objects.size() > 0)
+                m_MongodbInterface->logTableDetectionBasedSOMAObjects<PointType>(n,sweep, objects);
+
+
+
+        }
 
 
 
@@ -174,19 +218,10 @@ int main(int argc, char** argv)
 
 
 
-//    pcl::io::savePCDFileBinary("//home//hakan//results//complete_cloud.pcd",general_cloud);
+    //    pcl::io::savePCDFileBinary("//home//hakan//results//complete_cloud.pcd",general_cloud);
 
 
     ROS_INFO("Table detection is done!");
-
-    while (ros::ok())
-    {
-      //  pub.publish(general_cloud);
-
-        ros::spinOnce ();
-        loop_rate.sleep ();
-    }
-
 
 
     return 0;

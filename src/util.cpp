@@ -2,14 +2,14 @@
 
 
 //Filter out the values higher than max range in meters. dimension can be "x", "y", "z"
-Cloud clampPointCloud(const std::string dimension, Cloud cloud, float maxrange)
+Cloud clampPointCloud(const std::string dimension,const Cloud& cloud, float minrange, float maxrange = 5.0)
 {
      Cloud cloud_filtered;
     // Create the filtering object
      pcl::PassThrough<PointType> pass;
      pass.setInputCloud (cloud.makeShared());
      pass.setFilterFieldName (dimension.data());
-     pass.setFilterLimits (0.0, maxrange);
+     pass.setFilterLimits (minrange, maxrange);
      //pass.setFilterLimitsNegative (true);
      pass.filter (cloud_filtered);
 
@@ -208,7 +208,7 @@ std::vector< std::pair<deep_object_detection::Object,Cloud> > refineObjects(cons
             for(int j = i+1 ; j < remainingobjectcentroids.size(); j++)
             {
 
-                if(pcl::distances::l2(remainingobjectcentroids[i],remainingobjectcentroids[j]) <= 1.5)
+                if(pcl::distances::l2(remainingobjectcentroids[i],remainingobjectcentroids[j]) <= 0.75)
                 {
                     double isize = remainingobjects[i].width*remainingobjects[i].height;
                     double jsize = remainingobjects[j].width*remainingobjects[j].height;
@@ -258,7 +258,7 @@ std::vector< std::pair<deep_object_detection::Object,Cloud> > refineObjects(cons
         ROS_INFO("Distance of object w.r.t robot: %.2f",dist);
 
 
-        if(addindex[i] == true && dist <= 3.5)
+        if(addindex[i] == true && dist <= 5.0)
         {
 
             std::pair<deep_object_detection::Object,Cloud> objectcloudpair;
@@ -333,7 +333,71 @@ Cloud crop3DObjectFromPointCloud(const deep_object_detection::Object& object, Cl
         }
     }
 
-    return objectpc;
+    Cloud clampedpc  = clampPointCloud("z",objectpc,0.0,5.0);
+
+    return clampedpc;
+
+}
+pcl::PointCloud<pcl::PointXYZ> crop3DObjectFromPointCloud(const Table& table, const Cloud& objectcloud)
+{
+
+    std::vector<cv::Point2f> points;
+    for(int i = 0; i < table.tabletop.points.size(); i++)
+    {
+
+
+        cv::Point2f pt;
+        pt.x = table.tabletop.points[i].x;
+        pt.y = table.tabletop.points[i].y;
+
+        points.push_back(pt);
+    }
+
+    cv::RotatedRect rect = cv::minAreaRect(points);
+
+    cv::Point2f rect_points[4];
+
+    rect.points( rect_points );
+
+    float z_min = 0.5;
+    float z_max = 1.2;
+
+    float x_max,x_min,y_max,y_min;
+
+    x_max = -1000;
+    x_min = 1000;
+
+    y_max = -1000;
+    y_min = 1000;
+
+    for(int i = 0; i < 4; i++)
+    {
+        if(rect_points[i].x > x_max)
+            x_max = rect_points[i].x;
+        if(rect_points[i].x < x_min)
+            x_min = rect_points[i].x;
+
+        if(rect_points[i].y > y_max)
+            y_max = rect_points[i].y;
+        if(rect_points[i].y < y_min)
+            y_min = rect_points[i].y;
+
+
+
+    }
+    ROS_INFO("Limits of the table %f %f %f %f",x_max,x_min,y_max,y_min);
+
+    Cloud clampedpcx = clampPointCloud("x",objectcloud,x_min,x_max);
+
+    Cloud clampedpcy = clampPointCloud("y",clampedpcx,y_min,y_max);
+
+    Cloud clampedpcz = clampPointCloud("z",clampedpcy,z_min,z_max);
+
+    pcl::PointCloud<pcl::PointXYZ> nocolorcloud;
+
+    pcl::copyPointCloud(clampedpcz,nocolorcloud);
+
+    return nocolorcloud;
 
 }
 
@@ -388,5 +452,106 @@ void visualizeDeepNetObjects( std::pair<deep_object_detection::Object,Cloud> apa
 
 
     return;
+
+}
+std::string convertGeometryMsgsPolygon2Json(const geometry_msgs::Polygon &polygon, const std::string& key)
+{
+    Json::Value root;
+
+   // Json::Value vec(Json::arrayValue);
+
+    for(int i = 0; i< polygon.points.size(); i++)
+    {
+
+        Json::Value vec(Json::arrayValue);
+        vec.append(polygon.points[i].x);
+        vec.append(polygon.points[i].y);
+        vec.append(polygon.points[i].z);
+
+        std::stringstream ss;
+
+        ss<<i;
+
+        root[key][ss.str().data()] = vec;
+
+
+
+
+    }
+
+     return root.toStyledString();
+
+}
+
+std::string convertGeometryMsgsPose2Json(const geometry_msgs::Pose& pose)
+{
+    Json::Value root;
+
+    Json::Value vec(Json::arrayValue);
+
+    vec.append(pose.position.x);
+    vec.append(pose.position.y);
+    vec.append(pose.position.z);
+
+    root["position"] = vec;
+
+    Json::Value vec2(Json::arrayValue);
+
+    vec2.append(pose.orientation.x);
+    vec2.append(pose.orientation.y);
+    vec2.append(pose.orientation.z);
+    vec2.append(pose.orientation.w);
+
+    root["orientation"] = vec2;
+
+    return root.toStyledString();
+
+
+
+
+}
+std::string convertTableData2Json(const Table &table)
+{
+    Json::Value root;
+
+   // Json::Value vec(Json::arrayValue);
+
+   geometry_msgs::Polygon polygon = table.tabletop;
+
+    for(int i = 0; i< polygon.points.size(); i++)
+    {
+
+        Json::Value vec(Json::arrayValue);
+        vec.append(polygon.points[i].x);
+        vec.append(polygon.points[i].y);
+        vec.append(polygon.points[i].z);
+
+        std::stringstream ss;
+
+        ss<<i;
+
+        root["tabletop"][ss.str().data()] = vec;
+
+
+    }
+
+    Json::Value vec(Json::arrayValue);
+
+    vec.append(table.pose.pose.position.x);
+    vec.append(table.pose.pose.position.y);
+    vec.append(table.pose.pose.position.z);
+
+    root["position"] = vec;
+
+    Json::Value vec2(Json::arrayValue);
+
+    vec2.append(table.pose.pose.orientation.x);
+    vec2.append(table.pose.pose.orientation.y);
+    vec2.append(table.pose.pose.orientation.z);
+    vec2.append(table.pose.pose.orientation.w);
+
+    root["orientation"] = vec2;
+
+    return root.toStyledString();
 
 }
