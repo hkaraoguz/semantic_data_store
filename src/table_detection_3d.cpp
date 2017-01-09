@@ -1,14 +1,19 @@
 #include "mongodb_interface.h"
 #include "util.h"
 #include "metaroom_xml_parser/load_utilities.h"
+
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/common/common.h>
 #include <pcl_ros/transforms.h>
 #include <semantic_map/semantic_map_summary_parser.h>
 #include <semantic_map/room_xml_parser.h>
 #include <ros/subscriber.h>
-#include "table_detection/DetectTables.h"
+
+#include <table_detection/DetectTables.h>
+
+
 #include <soma_msgs/SOMAObject.h>
+
 
 #include <sys/types.h>
 #include <sys/stat.h>

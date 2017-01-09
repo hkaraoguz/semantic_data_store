@@ -22,6 +22,7 @@ typedef pcl::search::KdTree<PointType> Tree;
 typedef typename SemanticMapSummaryParser::EntityStruct Entities;
 typedef strands_perception_msgs::Table Table;
 
+// This is the RoomObject struct that contains the ros image, cloud and the deep_net object information
 struct RoomObject
 {
     sensor_msgs::Image rosimage;
@@ -30,6 +31,7 @@ struct RoomObject
 
 };
 
+// This is the Room Observation class that contains the room information vector of ros images and clouds and the room objects
 class RoomObservation
 {
 public:
@@ -41,28 +43,37 @@ public:
     std::vector<RoomObject> roomobjects;
 };
 
-Cloud clampPointCloud(const std::string dimension, const Cloud &cloud, float minrange, float maxrange);
 
-RoomObservation readRGBImagesfromRoomSweep(const std::string &observationpath, tf::Vector3 &robotPosition);
+class Util
+{
+public:
 
-Cloud crop3DObjectFromPointCloud(const deep_object_detection::Object& object, Cloud objectcloud, int image_cols);
+    Cloud clampPointCloud(const std::string dimension, Cloud cloud, float maxrange);
 
-pcl::PointCloud<pcl::PointXYZ> crop3DObjectFromPointCloud(const Table& table, const Cloud& objectcloud);
+    RoomObservation readRGBImagesfromRoomSweep(const std::string &observationpath, tf::Vector3 &robotPosition);
 
-std::vector< std::pair<deep_object_detection::Object,Cloud> > refineObjects(const std::vector<deep_object_detection::Object> &objects, const std::vector<Cloud> &clouds,
+
+    Cloud crop3DObjectFromPointCloud(const deep_object_detection::Object& object, Cloud objectcloud, int image_cols);
+
+    
+
+  std::vector< std::pair<deep_object_detection::Object,Cloud> > refineObjects(const std::vector<deep_object_detection::Object> &objects, const std::vector<Cloud> &clouds,
+
                                                                             int image_cols, const std::vector<std::string> labels, tf::Vector3 robotPosition);
 
-std::string convertGeometryMsgsPolygon2Json(const geometry_msgs::Polygon& polygon, const std::string &key);
+  std::string convertGeometryMsgsPolygon2Json(const geometry_msgs::Polygon& polygon, const std::string &key);
 
-std::string convertGeometryMsgsPose2Json(const geometry_msgs::Pose& pose);
+  std::string convertGeometryMsgsPose2Json(const geometry_msgs::Pose& pose);
 
-std::string convertTableData2Json(const Table& table);
-
-
-
-void visualizeDeepNetObjects( std::pair<deep_object_detection::Object,Cloud> apair, sensor_msgs::Image image);
+  std::string convertTableData2Json(const Table& table);
 
 
+
+    void visualizeDeepNetObjects( std::pair<deep_object_detection::Object,Cloud> apair, sensor_msgs::Image image);
+
+    bool logSOMAObjectsToDBCallService(ros::NodeHandle n, SemanticRoom<PointType> aRoom, RoomObservation obs );
+
+};
 
 
 #endif // UTIL_H

@@ -19,11 +19,14 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
+
+// Qt includes
 #include <QString>
 #include <QVariant>
 #include <qjson/serializer.h>
 #include <QDateTime>
-#include "util.h"
+
+// ROS includes
 #include <semantic_map/room.h>
 #include <semantic_map/semantic_map_summary_parser.h>
 #include <metaroom_xml_parser/load_utilities.h>
@@ -35,7 +38,12 @@
 
 #include <deep_object_detection/Object.h>
 
+#include "util.h"
+
+
+
 typedef pcl::PointXYZRGB PointType;
+
 
 
 

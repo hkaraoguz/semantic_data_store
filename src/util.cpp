@@ -1,8 +1,136 @@
 #include "util.h"
 
 
+bool Util::logSOMAObjectsToDBCallService(ros::NodeHandle n, SemanticRoom<PointType> aRoom, RoomObservation obs /*std::vector< std::pair< deep_object_detection::Object, Cloud> > data*/)
+{
+
+    ros::ServiceClient cl = n.serviceClient<soma_manager::SOMAInsertObjs>("soma/insert_objects");
+
+    if(!cl.exists())
+    {
+        qDebug()<<"SOMA insert_objects service does not exist!! Returning...";
+        return false;
+
+    }
+
+   // QString room_name = aRoom.getRoomLogName().c_str() + QString("___") + QString::number(aRoom.getRoomRunNumber());
+
+    std::vector<soma_msgs::SOMAObject> somaobjects;
+
+    for (int j=0; j<obs.roomobjects.size();j++)
+    {
+
+        sensor_msgs::PointCloud2 msg_cloud;
+        pcl::toROSMsg(obs.roomobjects[j].cloud, msg_cloud);
+
+        // Just a temporary addition for displaying the point cloud with robomongo;
+      //  msg_cloud.header.frame_id = "/map";
+
+        soma_msgs::SOMAObject lobj;
+
+        QJson::Serializer serializer;
+
+        QVariantMap map;
+
+        QVariant val(obs.roomobjects[j].object.confidence);
+
+        map.insert("deep_net_confidence",val);
+
+        QVariantMap boundingbox;
+
+        QVariant bx(obs.roomobjects[j].object.x);
+        QVariant by(obs.roomobjects[j].object.y);
+        QVariant bwidth(obs.roomobjects[j].object.width);
+        QVariant bheight(obs.roomobjects[j].object.height);
+
+        boundingbox.insert("x",bx);
+        boundingbox.insert("y",by);
+        boundingbox.insert("width",bwidth);
+        boundingbox.insert("height",bheight);
+
+        map.insert("boundingbox",boundingbox);
+
+
+        bool ok = false;
+        QByteArray json = serializer.serialize(map,&ok);
+
+        if(!ok)
+        {
+            ROS_WARN("Json for metadata cannot be created!!");
+        }
+        else
+        {
+             QString jsonstr(json);
+
+             lobj.metadata = jsonstr.toStdString();
+        }
+
+
+        boost::posix_time::ptime epoch(boost::gregorian::date(1970, 1, 1));
+        boost::posix_time::time_duration dur = aRoom.getRoomLogStartTime()-epoch;
+        ros::Time rost;
+        rost.fromSec(dur.total_seconds());
+
+        lobj.header.stamp =rost;
+        lobj.logtimestamp = dur.total_seconds();
+
+        QDateTime dt = QDateTime::fromMSecsSinceEpoch(dur.total_milliseconds());
+
+        Eigen::Vector4f centroid;
+
+        pcl::compute3DCentroid(obs.roomobjects[j].cloud,centroid);
+
+        lobj.cloud = msg_cloud;
+        lobj.type = obs.roomobjects[j].object.label;
+
+        lobj.pose.position.x = centroid[0];
+        lobj.pose.position.y = centroid[1];
+        lobj.pose.position.z = centroid[2];
+
+       /* std::stringstream ss;
+
+        ss<<"{\"deep_net_confidence\":"<<obs.roomobjects[j].object.confidence<<"\n}";
+
+        lobj.metadata = ss.str();*/
+
+        lobj.images.push_back(obs.roomobjects[j].rosimage);
+
+        somaobjects.push_back(lobj);
+
+
+
+    }
+
+
+    soma_manager::SOMAInsertObjs srv;
+
+    srv.request.objects = somaobjects;
+
+    if (cl.call(srv))
+    {
+        if(srv.response.result)
+            qDebug()<<"Objects successfully inserted";
+        else
+            qDebug()<<"Object insertion failed!";
+
+    }
+    else
+    {
+      ROS_ERROR("Failed to call soma/insert_objects service!!");
+      return false;
+    }
+
+
+
+    return true;
+
+}
+
+
 //Filter out the values higher than max range in meters. dimension can be "x", "y", "z"
-Cloud clampPointCloud(const std::string dimension,const Cloud& cloud, float minrange, float maxrange = 5.0)
+
+Cloud Util::clampPointCloud(const std::string dimension, Cloud cloud, float maxrange)
+
 {
      Cloud cloud_filtered;
     // Create the filtering object
@@ -17,7 +145,7 @@ Cloud clampPointCloud(const std::string dimension,const Cloud& cloud, float minr
 }
 
 // Function for detecting and storing objects from sweeps
-RoomObservation readRGBImagesfromRoomSweep(const std::string &observationpath, tf::Vector3& robotPosition)
+RoomObservation Util::readRGBImagesfromRoomSweep(const std::string &observationpath, tf::Vector3& robotPosition)
 {
 
     RoomObservation obs;
@@ -148,7 +276,7 @@ RoomObservation readRGBImagesfromRoomSweep(const std::string &observationpath, t
 
 }
 
-std::vector< std::pair<deep_object_detection::Object,Cloud> > refineObjects(const std::vector<deep_object_detection::Object> &objects, const std::vector<Cloud> &clouds,
+std::vector< std::pair<deep_object_detection::Object,Cloud> > Util::refineObjects(const std::vector<deep_object_detection::Object> &objects, const std::vector<Cloud> &clouds,
                                                                             int image_cols, const std::vector<std::string> labels, tf::Vector3 robotPosition)
 {
     std::vector< std::pair<deep_object_detection::Object,Cloud> > result;
@@ -316,7 +444,7 @@ std::vector< std::pair<deep_object_detection::Object,Cloud> > refineObjects(cons
     return result;
 }
 
-Cloud crop3DObjectFromPointCloud(const deep_object_detection::Object& object, Cloud objectcloud, int image_cols)
+Cloud Util::crop3DObjectFromPointCloud(const deep_object_detection::Object& object, Cloud objectcloud, int image_cols)
 {
     Cloud objectpc;
 
@@ -402,7 +530,7 @@ pcl::PointCloud<pcl::PointXYZ> crop3DObjectFromPointCloud(const Table& table, co
 }
 
 // The function that visualizes objects detected by deep-net
-void visualizeDeepNetObjects( std::pair<deep_object_detection::Object,Cloud> apair, sensor_msgs::Image image)
+void Util::visualizeDeepNetObjects( std::pair<deep_object_detection::Object,Cloud> apair, sensor_msgs::Image image)
 {
 
     ROS_INFO("%s",apair.first.label.data());

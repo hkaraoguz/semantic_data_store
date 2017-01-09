@@ -6,7 +6,7 @@
 #include <semantic_map/semantic_map_summary_parser.h>
 #include <semantic_map/room_xml_parser.h>
 #include <ros/subscriber.h>
-#include "table_detection/DetectTables.h"
+#include <table_detection/DetectTables.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
