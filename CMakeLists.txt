@@ -17,8 +17,8 @@ find_package(OpenCV REQUIRED)
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
-link_directories(../../devel/lib/)
-include_directories(${PROJECT_DIR}/include/)
+#link_directories(../../devel/lib/)
+#include_directories(${PROJECT_DIR}/include/)
 rosbuild_prepare_qt4(QtCore QtXml)
 
  add_message_files(
@@ -38,15 +38,17 @@ generate_messages(
 catkin_package(
    INCLUDE_DIRS include
    LIBRARIES metaroom_xml_parser
-   DEPENDS qt_build image_geometry libqt4-dev pcl_ros mongodb_store_modified semantic_map message_runtime soma_msgs soma_manager
+   DEPENDS qt_build image_geometry libqt4-dev pcl_ros mongodb_store_modified semantic_map message_runtime soma_msgs soma_manager qjson
 )
 
-include_directories(include
+include_directories(
+  include
   ${catkin_INCLUDE_DIRS}
   ../strands_3d_mapping/metaroom_xml_parser/include/
   ${OpenCV_HEADERS}
 )
 
+link_directories(${catkin_LINK_DIRS} ../../devel/lib/)
 
 add_executable(semantic_data_store_node src/semantic_data_store.cpp src/util.cpp)
 
@@ -74,6 +76,7 @@ target_link_libraries(complete_cloud_publisher
   ${QT_LIBRARIES}
   ${OpenCV_LIBRARIES}
   metaroom_xml_parser
+  qjson
   jsoncpp
 )
 
@@ -83,6 +86,7 @@ target_link_libraries(table_detection_3d
   ${QT_LIBRARIES}
   ${OpenCV_LIBRARIES}
   metaroom_xml_parser
+  qjson
   jsoncpp
 )
 

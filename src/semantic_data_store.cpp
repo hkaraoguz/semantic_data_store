@@ -1,6 +1,6 @@
-#include "../include/mongodb_interface.h"
+#include "semantic_data_store/mongodb_interface.h"
 #include "metaroom_xml_parser/load_utilities.h"
-#include "util.h"
+#include "semantic_data_store/util.h"
 
 
 #include <nav_msgs/OccupancyGrid.h>
@@ -127,7 +127,7 @@ int main(int argc, char** argv)
     for(int i = 0; i < observations.size(); i++)
     {
 
-        RoomObservation roomobservation = readRGBImagesfromRoomSweep(observations[i],sweepCenter);
+        RoomObservation roomobservation = Util::readRGBImagesfromRoomSweep(observations[i],sweepCenter);
 
         if(roomobservation.rosimagesclouds.size() > 0)
         {
@@ -162,7 +162,7 @@ int main(int argc, char** argv)
             if(object_detection_service.call(detect_objects))
             {
                 // We refine the detected objects based on distance to not to include same object multiple times
-                std::vector< std::pair<deep_object_detection::Object,Cloud> > refinedObjectsCloudsPair = refineObjects(detect_objects.response.objects,clouds,rosimages[0].width,labels,sweepCenter);
+                std::vector< std::pair<deep_object_detection::Object,Cloud> > refinedObjectsCloudsPair = Util::refineObjects(detect_objects.response.objects,clouds,rosimages[0].width,labels,sweepCenter);
 
                 for(int j = 0; j < refinedObjectsCloudsPair.size(); j++)
                 {
@@ -193,7 +193,7 @@ int main(int argc, char** argv)
                     if(shouldVisualize)
                     {
 
-                        visualizeDeepNetObjects(apair,roomobservation.rosimagesclouds[apair.first.imageID].first);
+                        Util::visualizeDeepNetObjects(apair,roomobservation.rosimagesclouds[apair.first.imageID].first);
                         usleep(1000);
                     }
 

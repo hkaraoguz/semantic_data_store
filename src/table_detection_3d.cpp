@@ -1,5 +1,5 @@
-#include "mongodb_interface.h"
-#include "util.h"
+#include "semantic_data_store/mongodb_interface.h"
+#include "semantic_data_store/util.h"
 #include "metaroom_xml_parser/load_utilities.h"
 
 #include <pcl/visualization/pcl_visualizer.h>
@@ -195,9 +195,9 @@ int main(int argc, char** argv)
 
                 soma_msgs::SOMAObject object;
 
-                object.metadata = convertTableData2Json(aTable);
+                object.metadata = Util::convertTableData2Json(aTable);
 
-                pcl::PointCloud<pcl::PointXYZ> obj_ros_cloud = crop3DObjectFromPointCloud(aTable,msg);
+                pcl::PointCloud<pcl::PointXYZ> obj_ros_cloud = Util::crop3DObjectFromPointCloud(aTable,msg);
 
                 pcl::toROSMsg(obj_ros_cloud, object.cloud);
 

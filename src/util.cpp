@@ -1,4 +1,4 @@
-#include "util.h"
+#include "semantic_data_store/util.h"
 
 
 bool Util::logSOMAObjectsToDBCallService(ros::NodeHandle n, SemanticRoom<PointType> aRoom, RoomObservation obs /*std::vector< std::pair< deep_object_detection::Object, Cloud> > data*/)
@@ -129,7 +129,7 @@ bool Util::logSOMAObjectsToDBCallService(ros::NodeHandle n, SemanticRoom<PointTy
 
 //Filter out the values higher than max range in meters. dimension can be "x", "y", "z"
 
-Cloud Util::clampPointCloud(const std::string dimension, Cloud cloud, float maxrange)
+Cloud Util::clampPointCloud(const std::string dimension, Cloud cloud, float minrange, float maxrange)
 
 {
      Cloud cloud_filtered;
@@ -466,7 +466,7 @@ Cloud Util::crop3DObjectFromPointCloud(const deep_object_detection::Object& obje
     return clampedpc;
 
 }
-pcl::PointCloud<pcl::PointXYZ> crop3DObjectFromPointCloud(const Table& table, const Cloud& objectcloud)
+pcl::PointCloud<pcl::PointXYZ> Util::crop3DObjectFromPointCloud(const Table& table, const Cloud& objectcloud)
 {
 
     std::vector<cv::Point2f> points;
@@ -515,11 +515,11 @@ pcl::PointCloud<pcl::PointXYZ> crop3DObjectFromPointCloud(const Table& table, co
     }
     ROS_INFO("Limits of the table %f %f %f %f",x_max,x_min,y_max,y_min);
 
-    Cloud clampedpcx = clampPointCloud("x",objectcloud,x_min,x_max);
+    Cloud clampedpcx = Util::clampPointCloud("x",objectcloud,x_min,x_max);
 
-    Cloud clampedpcy = clampPointCloud("y",clampedpcx,y_min,y_max);
+    Cloud clampedpcy = Util::clampPointCloud("y",clampedpcx,y_min,y_max);
 
-    Cloud clampedpcz = clampPointCloud("z",clampedpcy,z_min,z_max);
+    Cloud clampedpcz = Util::clampPointCloud("z",clampedpcy,z_min,z_max);
 
     pcl::PointCloud<pcl::PointXYZ> nocolorcloud;
 
@@ -638,7 +638,7 @@ std::string convertGeometryMsgsPose2Json(const geometry_msgs::Pose& pose)
 
 
 }
-std::string convertTableData2Json(const Table &table)
+std::string Util::convertTableData2Json(const Table &table)
 {
     Json::Value root;
 

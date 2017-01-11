@@ -1,5 +1,5 @@
-#include "mongodb_interface.h"
-#include "util.h"
+#include "semantic_data_store/mongodb_interface.h"
+#include "semantic_data_store/util.h"
 #include "metaroom_xml_parser/load_utilities.h"
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl_ros/transforms.h>
@@ -82,7 +82,7 @@ int main(int argc, char** argv)
 
         pcl_ros::transformPointCloud(msg, msg,sweep.vIntermediateRoomCloudTransforms[0]);
 
-        Cloud msgclamped = clampPointCloud("z",msg,0.0,1.5);
+        Cloud msgclamped = Util::clampPointCloud("z",msg,0.0,1.5);
 
 
         general_cloud.height += msg.height;
