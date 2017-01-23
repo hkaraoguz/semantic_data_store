@@ -10,6 +10,10 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <unistd.h>
+#include <pwd.h>
+
+const char *homedir;
 
 typedef pcl::PointXYZRGB PointType;
 typedef pcl::PointCloud<PointType> Cloud;
@@ -21,9 +25,13 @@ int main(int argc, char** argv)
 {
 
     string dataPath = "";
+    bool save_cloud = true;
+    float min_z = 0.0;
+    float max_z = 1.5;
+    bool transform_cloud = true;
 
     // Get the data path
-    if (argc == 2)
+    if (argc >= 2)
     {
         dataPath = argv[1];
     } else {
@@ -45,9 +53,20 @@ int main(int argc, char** argv)
         return -2;
     }
 
+
+
     ros::init(argc, argv, "complete_cloud_publisher");
 
     ros::NodeHandle n;
+
+    //Private node handle to get node specific parameters
+    ros::NodeHandle pnh("~");
+    pnh.getParam("save_cloud",save_cloud);
+    pnh.getParam("min_z",min_z);
+    pnh.getParam("max_z",max_z);
+    pnh.getParam("transform_cloud",transform_cloud);
+    ROS_INFO("Params %d %d %.2f %.2f",save_cloud,transform_cloud,min_z,max_z);
+
 
     vector<string> observations = semantic_map_load_utilties::getSweepXmls<PointType>(dataPath);
 
@@ -59,6 +78,7 @@ int main(int argc, char** argv)
     general_cloud.header.frame_id = "map";
 
 
+    // Publish the combination of clouds in a directory
     for(string observation:observations)
     {
 
@@ -66,10 +86,6 @@ int main(int argc, char** argv)
         // Parse the necessary clouds
         auto sweep = SimpleXMLParser<PointType>::loadRoomFromXML(observation, std::vector<std::string>{"RoomCompleteCloud", "RoomIntermediateCloud"},false, true);
 
-        // ros::init (argc, argv, "pub_pcl");
-        // ros::NodeHandle nh;
-
-        // Transform the local point cloud to map frame
 
         Cloud msg ;
 
@@ -80,24 +96,17 @@ int main(int argc, char** argv)
         msg.points.resize(msg.height*msg.width);
         msg.points = sweep.completeRoomCloud->points;
 
-        pcl_ros::transformPointCloud(msg, msg,sweep.vIntermediateRoomCloudTransforms[0]);
-
-        Cloud msgclamped = Util::clampPointCloud("z",msg,0.0,1.5);
+         // Transform the local point cloud to map frame
+        if(transform_cloud)
+        {
+            pcl_ros::transformPointCloud(msg, msg,sweep.vIntermediateRoomCloudTransforms[0]);
+        }
+        Cloud msgclamped = Util::clampPointCloud("z",msg,min_z,max_z);
 
 
         general_cloud.height += msg.height;
-       // general_cloud.width += msg.width;
-        //general_cloud.points.resize(general_cloud.height*general_cloud.width);
-
-        //general_cloud.points += msg.points;
-
-       // pcl::concatenatePointCloud(msg,general_cloud,general_cloud);
 
         general_cloud +=msgclamped;
-
-
-
-        //msg->points.push_back (pcl::PointXYZ(1.0, 2.0, 3.0));
 
 
 
@@ -105,44 +114,25 @@ int main(int argc, char** argv)
 
     general_cloud.header.stamp = ros::Time::now().toSec();
 
-    ros::Rate loop_rate(0.1);
+
 
     pub.publish(general_cloud);
 
-  /*  if(!ros::service::waitForService("detect_tables",5))
+
+    if(save_cloud)
     {
-        ROS_ERROR("Table detection service not available. Quitting...");
-        return -1;
+        const char *homedir;
 
-    }*/
+        if ((homedir = getenv("HOME")) == NULL) {
+            homedir = getpwuid(getuid())->pw_dir;
+        }
+        std::string save_path(homedir);
+        save_path +="//complete_cloud.pcd";
+        ROS_INFO("Save path %s",save_path.data());
+        pcl::io::savePCDFileBinary(save_path.data(),general_cloud);
 
-    pcl::io::savePCDFileBinary("//home//hakan//results//complete_cloud.pcd",general_cloud);
-
-
-   /* ros::ServiceClient table_detection_client = n.serviceClient<table_detection::DetectTables>("detect_tables");
-
-    table_detection::DetectTables detect_tables;
-
-    sensor_msgs::PointCloud2 general_cloud_msg;
-
-    pcl::toROSMsg(general_cloud, general_cloud_msg);
-
-    detect_tables.request.pointcloud = general_cloud_msg;*/
-
-   /* if(table_detection_client.call(detect_tables))
-    {
-        ROS_INFO("The number of detected tables %d",detect_tables.response.tables.size());
-
-    }*/
-
-    while (ros::ok())
-    {
-      //  pub.publish(general_cloud);
-
-        ros::spinOnce ();
-        loop_rate.sleep ();
     }
-
+    ROS_INFO("Complete cloud has been constructed and published");
 
 
     return 0;

@@ -71,7 +71,7 @@ public:
 
    static std::vector< std::pair<deep_object_detection::Object,Cloud> > refineObjects(const std::vector<deep_object_detection::Object> &objects, const std::vector<Cloud> &clouds,
 
-                                                                            int image_cols, const std::vector<std::string> labels, tf::Vector3 robotPosition);
+                                                                            int image_cols, const std::vector<std::string> labels, tf::Vector3 robotPosition, float object_neighbor_threshold, float object_distance_threshold);
 
   static std::string convertGeometryMsgsPolygon2Json(const geometry_msgs::Polygon& polygon, const std::string &key);
 

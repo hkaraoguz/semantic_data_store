@@ -66,7 +66,7 @@ int main(int argc, char** argv)
 
     vector<string> observations = semantic_map_load_utilties::getSweepXmls<PointType>(dataPath);
 
-      ros::ServiceClient table_detection_client = n.serviceClient<table_detection::DetectTables>("detect_tables");
+    ros::ServiceClient table_detection_client = n.serviceClient<table_detection::DetectTables>("detect_tables");
 
     ros::Publisher pub = n.advertise<Cloud>("complete_clouds", 1);
 

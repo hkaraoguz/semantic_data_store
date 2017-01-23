@@ -163,7 +163,7 @@ RoomObservation Util::readRGBImagesfromRoomSweep(const std::string &observationp
    // auto sweep = SimpleXMLParser<PointType>::loadRoomFromXML(observationpath, std::vector<std::string>{"RoomIntermediateCloud"},false, true);
 
 
-    obs.room = aRoom;
+
 
 
 
@@ -172,35 +172,24 @@ RoomObservation Util::readRGBImagesfromRoomSweep(const std::string &observationp
 
     semantic_map_load_utilties::IntermediateCloudCompleteData<PointType> dat = semantic_map_load_utilties::loadIntermediateCloudsCompleteDataFromSingleSweep<PointType>(observationpath);
 
+    if(dat.vIntermediateRoomClouds.size() == 0)
+    {
+        ROS_WARN("No Intermediate clouds present!! Skipping this room!!");
+        return obs;
+    }
 
+     obs.room = aRoom;
     //ROS_INFO("%s",observations[i].data());
 
 
     // Get the intermediate clouds
      std::vector<boost::shared_ptr<pcl::PointCloud<PointType>>> clouds = dat.vIntermediateRoomClouds;//sweep.vIntermediateRoomClouds;//aRoom.getIntermediateClouds();
 
-   /*  std::vector<boost::shared_ptr<pcl::PointCloud<PointType>>> clamped_clouds;
-     for(int j = 0 ; j < clouds.size(); j++)
-     {
-         Cloud ptr = clampPointCloud("z",*clouds[j],5.0);
-         clamped_clouds.push_back(ptr.makeShared());
-     }*/
+    std::vector<tf::StampedTransform> transforms = dat.vIntermediateRoomCloudTransforms;
 
-    //   std::vector<tf::StampedTransform> transformsregistered = aRoom.getIntermediateCloudTransformsRegistered();
+    std::vector<tf::StampedTransform> transformsregistered = dat.vIntermediateRoomCloudTransformsRegistered;
 
-    //   sweepCenter = transformsregistered[transformsregistered.size()/2].getOrigin();
-
-
-    // Get the cloud transforms
-  //  std::vector<tf::StampedTransform> transforms = sweep.getIntermediateCloudTransforms();
-
-    std::vector<tf::StampedTransform> transforms = dat.vIntermediateRoomCloudTransforms; //sweep.vIntermediateRoomCloudTransforms;
-
-    std::vector<tf::StampedTransform> transformsregistered = dat.vIntermediateRoomCloudTransformsRegistered;//sweep.vIntermediateRoomCloudTransformsRegistered;
-
-    tf::StampedTransform center_transform = transforms[0];  //dat.vIntermediateRoomCloudTransformsRegistered[dat.vIntermediateRoomCloudTransformsRegistered.size()/2];
-
-   // center_transform = transforms[0];
+    tf::StampedTransform center_transform = transforms[0];
 
     robotPosition = center_transform.getOrigin();
 
@@ -208,8 +197,6 @@ RoomObservation Util::readRGBImagesfromRoomSweep(const std::string &observationp
     //std::cout<<"transforms sizes"<<transforms.size()<<" "<<transformsregistered.size()<<" "<<clouds.size()<<std::endl;
 
     int j  = 0;
-
-
 
     // For each cloud
     for(int i = 0; i < clouds.size(); i++)
@@ -277,7 +264,7 @@ RoomObservation Util::readRGBImagesfromRoomSweep(const std::string &observationp
 }
 
 std::vector< std::pair<deep_object_detection::Object,Cloud> > Util::refineObjects(const std::vector<deep_object_detection::Object> &objects, const std::vector<Cloud> &clouds,
-                                                                            int image_cols, const std::vector<std::string> labels, tf::Vector3 robotPosition)
+                                                                            int image_cols, const std::vector<std::string> labels, tf::Vector3 robotPosition, float object_neighbor_threshold, float object_distance_threshold)
 {
     std::vector< std::pair<deep_object_detection::Object,Cloud> > result;
 
@@ -336,7 +323,7 @@ std::vector< std::pair<deep_object_detection::Object,Cloud> > Util::refineObject
             for(int j = i+1 ; j < remainingobjectcentroids.size(); j++)
             {
 
-                if(pcl::distances::l2(remainingobjectcentroids[i],remainingobjectcentroids[j]) <= 0.75)
+                if(pcl::distances::l2(remainingobjectcentroids[i],remainingobjectcentroids[j]) <= object_neighbor_threshold)
                 {
                     double isize = remainingobjects[i].width*remainingobjects[i].height;
                     double jsize = remainingobjects[j].width*remainingobjects[j].height;
@@ -386,7 +373,7 @@ std::vector< std::pair<deep_object_detection::Object,Cloud> > Util::refineObject
         ROS_INFO("Distance of object w.r.t robot: %.2f",dist);
 
 
-        if(addindex[i] == true && dist <= 5.0)
+        if(addindex[i] == true && dist <= object_distance_threshold)
         {
 
             std::pair<deep_object_detection::Object,Cloud> objectcloudpair;
@@ -487,7 +474,7 @@ pcl::PointCloud<pcl::PointXYZ> Util::crop3DObjectFromPointCloud(const Table& tab
 
     rect.points( rect_points );
 
-    float z_min = 0.5;
+    float z_min = 0.8;
     float z_max = 1.2;
 
     float x_max,x_min,y_max,y_min;

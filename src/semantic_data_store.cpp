@@ -1,4 +1,3 @@
-#include "semantic_data_store/mongodb_interface.h"
 #include "metaroom_xml_parser/load_utilities.h"
 #include "semantic_data_store/util.h"
 
@@ -76,23 +75,41 @@ int main(int argc, char** argv)
     }
 
 
-
-
     /******* Initialize the ros node *******************/
     ros::init(argc, argv, "semantic_data_store");
 
     ros::NodeHandle n;
-    /**************************************************/
 
-    MongodbInterface* m_MongodbInterface;
+    //private node handle
+    ros::NodeHandle pn("~");
+
+    float confidence_threshold;
+    pn.getParam("deep_net_confidence_threshold",confidence_threshold);
+
+    // threshold to merge object with its neighbor in meters
+    float object_neighbor_threshold;
+    pn.getParam("object_neighbor_threshold",object_neighbor_threshold);
+
+    // distance threshold of the object w.r.t the robot
+    float object_distance_threshold;
+    pn.getParam("object_distance_threshold",object_distance_threshold);
 
     // Get the labels from the parameter server otherwise it will use the chairs as the object of interest
-    ros::param::get("semantic_data_store/labels",labels);
+    pn.getParam("object_labels",labels);
+
+    ROS_INFO("Private params %.2f %.2f %.2f",confidence_threshold,object_neighbor_threshold,object_distance_threshold);
+
+    /**************************************************/
+
+
+
+
 
     if(labels.size() == 0)
     {
         labels.push_back("chair");
-        ROS_WARN("No labels provided!! Detecting only chairs...");
+        labels.push_back("person");
+        ROS_WARN("No labels provided!! Detecting only chairs and people...");
     }
     else
     {
@@ -111,10 +128,7 @@ int main(int argc, char** argv)
 
     }
 
-    if(shouldStore)
-    {
-      m_MongodbInterface  =  new MongodbInterface(n);
-    }
+
 
     ros::ServiceClient object_detection_service = n.serviceClient<deep_object_detection::DetectObjects>("/deep_object_detection/detect_objects");
 
@@ -126,6 +140,7 @@ int main(int argc, char** argv)
     //We now have the observation vector. Now we should parse the relevant data
     for(int i = 0; i < observations.size(); i++)
     {
+        ROS_INFO("Observation path: %s",observations[i].data());
 
         RoomObservation roomobservation = Util::readRGBImagesfromRoomSweep(observations[i],sweepCenter);
 
@@ -152,17 +167,11 @@ int main(int argc, char** argv)
             detect_objects.request.confidence_threshold = 0.8;
 
 
-
-
-           // labels.push_back("tvmonitor");
-            //  labels.push_back("person");
-
-
             // If we can call the service and get a response
             if(object_detection_service.call(detect_objects))
             {
                 // We refine the detected objects based on distance to not to include same object multiple times
-                std::vector< std::pair<deep_object_detection::Object,Cloud> > refinedObjectsCloudsPair = Util::refineObjects(detect_objects.response.objects,clouds,rosimages[0].width,labels,sweepCenter);
+                std::vector< std::pair<deep_object_detection::Object,Cloud> > refinedObjectsCloudsPair = Util::refineObjects(detect_objects.response.objects,clouds,rosimages[0].width,labels,sweepCenter,object_neighbor_threshold,object_distance_threshold);
 
                 for(int j = 0; j < refinedObjectsCloudsPair.size(); j++)
                 {
@@ -173,8 +182,6 @@ int main(int argc, char** argv)
 
                     aroomobject.object = apair.first;
                     aroomobject.cloud = apair.second;
-
-                    // aroomobject.image = roomobservation.rosimagesclouds[apair.first.imageID];
 
                     cv_bridge::CvImagePtr ptr = cv_bridge::toCvCopy(roomobservation.rosimagesclouds[apair.first.imageID].first,"bgr8");
 
@@ -199,7 +206,8 @@ int main(int argc, char** argv)
 
                 }
                 if(roomobservation.roomobjects.size() > 0 && shouldStore)
-                    m_MongodbInterface->logSOMAObjectsToDBCallService(n,roomobservation.room,roomobservation);
+                   Util::logSOMAObjectsToDBCallService(n,roomobservation.room,roomobservation);
+                roomobservation.roomobjects.clear();
 
 
             }
@@ -215,19 +223,6 @@ int main(int argc, char** argv)
 
     ROS_INFO("Finished inserting semantic data...");
 
-
-  /*  ros::Rate loop(0.1);
-
-    while(n.ok())
-    {
-
-        ros::spinOnce();
-        loop.sleep();
-
-    }*/
-
-    if(m_MongodbInterface)
-        delete m_MongodbInterface;
 
 
     return 0;

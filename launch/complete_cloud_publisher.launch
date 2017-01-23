@@ -1,0 +1,30 @@
+<!-- Launch complete_cloud publisher -->
+<launch>
+
+    <!-- The root metaroom folder to read the clouds -->
+    <arg name="root_folder" />
+
+    <!-- The parameter for transforming the point cloud. (Depends on the metaroom ) -->
+    <arg name="transform_cloud" default="False"/>
+
+    <!-- The argument for saving the constructed cloud -->
+    <arg name="save_cloud" default="True"/>
+    <!-- The min_z limit -->
+    <arg name="min_z" default="0.2"/>
+    <!-- The max_z limit -->
+    <arg name="max_z" default="1.5"/>
+
+
+    <!-- Run the cloud publisher -->
+    <node pkg="semantic_data_store" type="complete_cloud_publisher" name="complete_cloud_publisher_node" args="$(arg root_folder) " output="screen">
+        <!-- Node specific parameters -->
+        <param name="transform_cloud" type="bool" value="$(arg transform_cloud)"/>
+        <param name="save_cloud" type="bool" value="$(arg save_cloud)"/>
+        <param name="min_z" type="double" value="$(arg min_z)"/>
+        <param name="max_z" type="double" value="$(arg max_z)"/>
+
+    </node>
+
+
+
+</launch>

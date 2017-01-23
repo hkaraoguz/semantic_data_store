@@ -1,0 +1,36 @@
+<!-- Launch extraction of planes and table detection together with visualization -->
+<launch>
+
+    <!-- The topic of the input cloud to segment into planes and detect tables -->
+    <arg name="root_folder" />
+
+    <!-- The topic of the input cloud to segment into planes and detect tables -->
+    <arg name="store_data" default="1" />
+
+    <arg name="visualize_data"  default= "0" />
+
+    <!-- The topic of the input cloud to segment into planes and detect tables -->
+    <arg name="object_labels" default="['chair','person']"/>
+
+
+    <!-- The topic of the input cloud to segment into planes and detect tables -->
+    <arg name="confidence_threshold" default="0.8"/>
+    <!-- The topic to publish the detected tables on -->
+    <arg name="object_neighbor_threshold" default="0.75"/>
+    <!-- The topic to publish the resulting found planes on -->
+    <arg name="object_distance_threshold" default="4.0"/>
+
+
+    <!-- Launch the table detection working on the extracted planes -->
+    <node pkg="semantic_data_store" type="semantic_data_store_node" name="semantic_data_store_node" args="$(arg root_folder) $(arg store_data) $(arg visualize_data)" output="screen">
+        <!-- Minimum and maximum height of a table plane -->
+        <rosparam param="object_labels" subst_value="True">$(arg object_labels)</rosparam>
+        <param name="deep_net_confidence_threshold" type="double" value="$(arg confidence_threshold)"/>
+        <param name="object_neighbor_threshold" type="double" value="$(arg object_neighbor_threshold)"/>
+        <param name="object_distance_threshold" type="double" value="$(arg object_distance_threshold)"/>
+
+    </node>
+
+
+
+</launch>
